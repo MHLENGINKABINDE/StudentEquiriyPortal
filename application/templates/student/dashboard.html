@@ -1,0 +1,216 @@
+{% extends 'shared/layout.html' %}
+
+{% block title %}Student Dashboard | DUT Student Enquiry Management System{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="mb-2">Student Dashboard</h1>
+                    <p class="lead mb-0">Welcome, {{ current_user.display_name }}!</p>
+                </div>
+                <div>
+                    <a href="{{ url_for('student.new_grievance') }}" class="btn btn-primary btn-lg">
+                        <i class="fas fa-plus-circle me-2"></i>Submit New Enquiry
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3 col-sm-6 mb-4 mb-md-0">
+            <div class="stats-card">
+                <div class="stats-icon">
+                    <i class="fas fa-file-alt"></i>
+                </div>
+                <div class="stats-value">{{ grievances|length }}</div>
+                <div class="stats-title">Total Enquiries</div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 col-sm-6 mb-4 mb-md-0">
+            <div class="stats-card">
+                <div class="stats-icon">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div class="stats-value">{{ status_counts.get('pending', 0) }}</div>
+                <div class="stats-title">Pending</div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 col-sm-6 mb-4 mb-md-0">
+            <div class="stats-card">
+                <div class="stats-icon">
+                    <i class="fas fa-spinner"></i>
+                </div>
+                <div class="stats-value">{{ status_counts.get('in_progress', 0) + status_counts.get('assigned', 0) + status_counts.get('under_review', 0) }}</div>
+                <div class="stats-title">In Progress</div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 col-sm-6 mb-4 mb-md-0">
+            <div class="stats-card">
+                <div class="stats-icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="stats-value">{{ status_counts.get('resolved', 0) + status_counts.get('closed', 0) }}</div>
+                <div class="stats-title">Resolved</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Actions -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3 mb-md-0">
+                            <a href="{{ url_for('student.new_grievance') }}" class="btn btn-outline-primary btn-block d-flex align-items-center justify-content-center p-3">
+                                <i class="fas fa-plus-circle me-2"></i> Submit New Enquiry
+                            </a>
+                        </div>
+                        <div class="col-md-4 mb-3 mb-md-0">
+                            <a href="#" class="btn btn-outline-secondary btn-block d-flex align-items-center justify-content-center p-3 filter-btn" data-filter="pending">
+                                <i class="fas fa-clock me-2"></i> View Pending Enquiries
+                            </a>
+                        </div>
+                        <div class="col-md-4">
+                            <a href="{{ url_for('auth.profile') }}" class="btn btn-outline-info btn-block d-flex align-items-center justify-content-center p-3">
+                                <i class="fas fa-user-circle me-2"></i> View Profile
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Enquiries Table -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">My Enquiries</h5>
+                    <div class="dropdown">
+                        <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" id="filterDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            Filter by Status
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="filterDropdown">
+                            <li><a class="dropdown-item" href="#" data-filter="all">All Enquiries</a></li>
+                            <li><a class="dropdown-item" href="#" data-filter="pending">Pending</a></li>
+                            <li><a class="dropdown-item" href="#" data-filter="in_progress">In Progress</a></li>
+                            <li><a class="dropdown-item" href="#" data-filter="resolved">Resolved</a></li>
+                            <li><a class="dropdown-item" href="#" data-filter="closed">Closed</a></li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="card-body table-responsive">
+                    {% if grievances %}
+                        <table class="table table-hover align-middle" id="enquiriesTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Query Category</th>
+                                    <th>Department</th>
+                                    <th>Created</th>
+                                    <th>Status</th>
+                                    <th>Last Updated</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for grievance in grievances %}
+                                <tr class="enquiry-row" data-status="{{ grievance.status }}">
+                                    <td>{{ grievance.id }}</td>
+                                    <td>{{ grievance.query_category }}</td>
+                                    <td>{{ grievance.department.name if grievance.department else 'Unknown' }}</td>
+                                    <td data-sort="{{ grievance.created_at.isoformat() }}">
+                                        <span title="{{ grievance.created_at.strftime('%Y-%m-%d %H:%M:%S') }}">
+                                            {{ grievance.created_at.strftime('%d %b %Y') }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if grievance.status == 'pending' %}
+                                            <span class="badge bg-warning text-dark">Pending</span>
+                                        {% elif grievance.status == 'in_progress' %}
+                                            <span class="badge bg-info">In Progress</span>
+                                        {% elif grievance.status == 'assigned' %}
+                                            <span class="badge bg-primary">Assigned</span>
+                                        {% elif grievance.status == 'under_review' %}
+                                            <span class="badge bg-secondary">Under Review</span>
+                                        {% elif grievance.status == 'resolved' %}
+                                            <span class="badge bg-success">Resolved</span>
+                                        {% elif grievance.status == 'closed' %}
+                                            <span class="badge bg-dark">Closed</span>
+                                        {% else %}
+                                            <span class="badge bg-light text-dark">{{ grievance.status }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td data-sort="{{ grievance.updated_at.isoformat() }}">
+                                        <span title="{{ grievance.updated_at.strftime('%Y-%m-%d %H:%M:%S') }}">
+                                            {{ grievance.updated_at.strftime('%d %b %Y') }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('student.grievance_detail', grievance_id=grievance.id) }}" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye"></i> View
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <p class="text-muted mb-3">You haven't submitted any enquiries yet.</p>
+                            <a href="{{ url_for('student.new_grievance') }}" class="btn btn-primary">
+                                <i class="fas fa-plus-circle me-2"></i>Submit New Enquiry
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        // Initialize DataTable
+        var table = $('#enquiriesTable').DataTable({
+            order: [[3, 'desc']], // Sort by created date by default
+            pageLength: 10,
+            lengthMenu: [5, 10, 25, 50],
+            language: {
+                search: "_INPUT_",
+                searchPlaceholder: "Search enquiries...",
+                lengthMenu: "Show _MENU_ entries",
+                info: "Showing _START_ to _END_ of _TOTAL_ enquiries"
+            }
+        });
+        
+        // Filter functionality
+        $('.dropdown-item[data-filter], .filter-btn[data-filter]').click(function(e) {
+            e.preventDefault();
+            var filter = $(this).data('filter');
+            
+            if (filter === 'all') {
+                table.columns(4).search('').draw();
+            } else {
+                table.columns(4).search(filter).draw();
+            }
+        });
+    });
+</script>
+{% endblock %}
+{% endblock %} 
