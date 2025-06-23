@@ -35,9 +35,4 @@ ENV/
 *.log
 
 # Local development settings
-instance/
 .webassets-cache
-
-# Database
-*.db
-*.sqlite3
